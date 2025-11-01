@@ -1,0 +1,89 @@
+# SmolLM2 Distillation Configuration
+# Distills SmolLM2-360M into a smaller pruned model
+
+project_name: "smollm2-distillation"
+
+# Dataset Configuration
+dataset:
+  name: "Trelis/smollm-corpus-2percent"
+  split: "train" 
+  total_train_samples: 1000000 # 1M rows for ~0.4% of the pre-training data
+  eval_samples: 1000
+  subsets:
+    - name: "cosmopedia"
+      split: "train"
+    - name: "fineweb_chunk_0"
+      split: "train"
+    - name: "fineweb_chunk_1"
+      split: "train"
+    - name: "fineweb_chunk_2"
+      split: "train"
+    - name: "fineweb_chunk_3"
+      split: "train"
+    - name: "fineweb_chunk_4"
+      split: "train"
+    - name: "fineweb_chunk_5"
+      split: "train"
+    - name: "fineweb_chunk_6"
+      split: "train"
+    - name: "fineweb_chunk_7"
+      split: "train"
+      
+  streaming: true
+
+  
+
+# Model Configuration
+models:
+  # teacher: "HuggingFaceTB/SmolLM2-360M"  # Teacher model (360M params)
+  teacher: "HuggingFaceTB/SmolLM2-135M"  # Student model (135M params)
+  # If you have a custom pruned model, replace student with your model path
+  student: "Trelis/SmolLM-135M-layer-pruned-90M-raw"
+
+# Tokenizer Configuration
+tokenizer:
+  max_length: 2048  # Maximum sequence length
+
+# Training Configuration
+training:
+  output_dir: "./smollm2_distilled"
+  per_device_train_batch_size: 8  # Adjust based on your GPU memory
+  per_device_eval_batch_size: 8
+  gradient_accumulation_steps: 8  # Effective batch size = 8 * 8 = 64
+  learning_rate: 0.0005  # Conservative learning rate for distillation
+  weight_decay: 0.01
+  warmup_ratio: 0.03  # 3% warmup
+  bf16: true  # Use bfloat16 for better numerical stability
+  fp16: false
+  gradient_checkpointing: true  # Enable to save memory
+  report_to: "tensorboard"  # Options: tensorboard, wandb, none
+  resume_from_checkpoint: null  # Set to checkpoint path to resume
+  packing: true  # Pack sequences for efficiency
+
+# Training Auxiliary Parameters
+training_aux:
+  num_train_epochs: 1.0
+  annealing_phase_fraction: 0.2  # Start annealing in last 20% of training
+  save_steps_fraction: 0.1  # Save every 10% of training
+  logging_steps_fraction: 0.01  # Log every 1% of training
+  eval_steps_fraction: 0.1  # Evaluate every 10% of training
+
+# Distillation Configuration
+distillation:
+  temperature: 2.0  # Temperature for softening probability distributions
+  alpha: 1.0  # Weight for KL divergence loss (1.0 = pure distillation, <1.0 = mixed with CE loss)
+
+# Model-specific Configuration
+model_config:
+  use_flash_attention: false  # Set to true if flash attention is available
+
+# Weights & Biases (optional)
+wandb:
+  enabled: false  # Set to true to use wandb
+  project: "smollm2-distillation"
+  entity: "your-wandb-username"
+
+# Hugging Face Hub (optional)
+huggingface:
+  push_to_hub: false  # Set to true to push to Hub
+  # hub_model_id: "your-username/smollm2-distilled"
